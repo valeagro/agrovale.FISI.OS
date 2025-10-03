@@ -1,0 +1,22 @@
+{
+  "name": "Formulário Inteligente de Solicitação de Insumos",
+  "short_name": "FISI",
+  "description": "Aplicativo para criação de Ordens de Serviço da Agrovale.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#5cb85c",
+  "icons": [
+    {
+      "src": "agrovale512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "agrovale192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
+
