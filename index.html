@@ -333,9 +333,8 @@
                     <td style="width: 15%;"><b>N° de Pessoas:</b><input type="text" class="n-pessoas-input"></td>
                     <td style="width: 15%;">
                         <b>Fazenda:</b>
-                        <select class="fazenda-select">
-                            <option value="" selected disabled>Selecione a fazenda</option>
-                        </select>
+                        <input class="fazenda-input" placeholder="Código ou nome...">
+                        <datalist></datalist>
                         <span class="fazenda-code-span hidden-span"></span>
                     </td>
                     <td style="width: 20%;"><b>Responsável:</b>
@@ -604,7 +603,10 @@
             newRow.innerHTML = rowHTML;
             tbody.appendChild(newRow);
 
-            const selectedFazenda = osContainer.querySelector('.fazenda-select').value;
+            // MODIFICAÇÃO: Obter valor do input de fazenda
+            const fazendaInputValue = osContainer.querySelector('.fazenda-input').value;
+            const selectedFazenda = fazendaKeysSorted.find(key => `${key} ${fazendaNames[key]}` === fazendaInputValue);
+
             newRow.querySelectorAll('.talhao-select').forEach(select => {
                 select.disabled = !selectedFazenda;
                 if (selectedFazenda && fazendaTalhoes[selectedFazenda]) {
@@ -638,9 +640,22 @@
         }
 
         function initializeOS(osElement) {
-            const fazendaSelect = osElement.querySelector('.fazenda-select');
-            while (fazendaSelect.options.length > 1) fazendaSelect.remove(1);
-            fazendaKeysSorted.forEach(key => fazendaSelect.add(new Option(`${key} ${fazendaNames[key]}`, key)));
+            // MODIFICAÇÃO INICIO: Lógica para o input/datalist de Fazenda
+            const fazendaInput = osElement.querySelector('.fazenda-input');
+            const datalist = osElement.querySelector('datalist');
+            const uniqueId = 'fazenda-list-' + Date.now() + Math.random().toString(36).substr(2, 9);
+            datalist.id = uniqueId;
+            fazendaInput.setAttribute('list', uniqueId);
+
+            // Popula o datalist
+            if (datalist.options.length === 0) {
+                 fazendaKeysSorted.forEach(key => {
+                    const option = document.createElement('option');
+                    option.value = `${key} ${fazendaNames[key]}`;
+                    datalist.appendChild(option);
+                });
+            }
+            // FIM DA MODIFICAÇÃO
 
             osElement.querySelectorAll('.insumo-select').forEach(select => {
                 select.innerHTML = '<option value="" selected disabled>Selecione um insumo</option>';
@@ -662,8 +677,11 @@
 
             osElement.querySelectorAll('input, select').forEach(el => el.addEventListener('change', updateStatus));
 
-            fazendaSelect.addEventListener('change', () => {
-                const selectedFazenda = fazendaSelect.value;
+            // MODIFICAÇÃO: Event listener para o input de fazenda
+            fazendaInput.addEventListener('input', () => {
+                const fazendaValue = fazendaInput.value;
+                const selectedFazenda = fazendaKeysSorted.find(key => `${key} ${fazendaNames[key]}` === fazendaValue);
+                
                 osElement.querySelectorAll('.talhao-select').forEach(select => {
                     select.innerHTML = '';
                     if (selectedFazenda && fazendaTalhoes[selectedFazenda]) {
@@ -733,7 +751,9 @@
         function handleAreaInput(event) {
             const input = event.target;
             const osElement = input.closest('.os-container');
-            const fazenda = osElement.querySelector('.fazenda-select').value;
+            // MODIFICAÇÃO: Obter valor do input de fazenda
+            const fazendaValue = osElement.querySelector('.fazenda-input').value;
+            const fazenda = fazendaKeysSorted.find(key => `${key} ${fazendaNames[key]}` === fazendaValue);
             
             if (!fazenda) {
                 alert("Por favor, selecione uma fazenda primeiro.");
@@ -820,7 +840,10 @@
 
         function updateAreaFromSelection(select) {
             const osElement = select.closest('.os-container');
-            const selectedFazenda = osElement.querySelector('.fazenda-select').value;
+            // MODIFICAÇÃO: Obter valor do input de fazenda
+            const fazendaValue = osElement.querySelector('.fazenda-input').value;
+            const selectedFazenda = fazendaKeysSorted.find(key => `${key} ${fazendaNames[key]}` === fazendaValue);
+
             if (!selectedFazenda) return;
             const [startTalhao] = Array.isArray(fazendaTalhoes[selectedFazenda]) ? fazendaTalhoes[selectedFazenda] : [1,1];
             let totalAreaSelecionada = 0;
@@ -896,7 +919,8 @@
             let allGood = true;
             document.querySelectorAll('.os-container').forEach(os => {
                 const statusSpan = os.querySelector('.os-status');
-                const fields = [os.querySelector('.operacao-select'), os.querySelector('.data-input'), os.querySelector('.almoxarifado-input'), os.querySelector('.fazenda-select'), os.querySelector('.responsavel-select')];
+                // MODIFICAÇÃO: Alterado seletor de fazenda
+                const fields = [os.querySelector('.operacao-select'), os.querySelector('.data-input'), os.querySelector('.almoxarifado-input'), os.querySelector('.fazenda-input'), os.querySelector('.responsavel-select')];
                 const totalArea = parseFloat(os.querySelector('.totalAreaInput').value.replace(',', '.')) || 0;
                 if (fields.every(f => f.value) && totalArea > 0) {
                     statusSpan.textContent = 'Verificado';
@@ -920,27 +944,39 @@
         
         window.addEventListener('beforeprint', () => {
             document.querySelectorAll('.os-container').forEach(osElement => {
-                // MODIFICADO: Lógica para exibir código ou texto na impressão
+                // Lógica para exibir código ou texto na impressão
                 osElement.querySelectorAll('select:not([multiple])').forEach(select => {
                     const span = select.parentElement.querySelector(`[class*="-code-span"]`);
                     if (span) {
-                        // Verifica se este select deve mostrar o código (valor)
                         if (
                             select.classList.contains('operacao-select') ||
-                            select.classList.contains('fazenda-select') ||
+                            // select.classList.contains('fazenda-select') || // Removido, pois foi substituído
                             select.classList.contains('responsavel-select') ||
                             select.classList.contains('insumo-select') ||
                             select.classList.contains('maquina-select')
                         ) {
                             span.textContent = select.value || '';
                         } else {
-                            // Para os demais, mostra o texto da opção
                             span.textContent = select.options[select.selectedIndex]?.text || '';
                         }
                         span.style.display = 'inline-block';
                     }
                     select.style.display = 'none';
                 });
+
+                // MODIFICAÇÃO INICIO: Adicionado bloco para tratar o input da fazenda na impressão
+                const fazendaInput = osElement.querySelector('.fazenda-input');
+                if (fazendaInput) {
+                    const span = fazendaInput.parentElement.querySelector('.fazenda-code-span');
+                    if (span) {
+                        const fazendaValue = fazendaInput.value;
+                        const fazendaKey = fazendaKeysSorted.find(key => `${key} ${fazendaNames[key]}` === fazendaValue);
+                        span.textContent = fazendaKey || ''; // Mostra o código
+                        span.style.display = 'inline-block';
+                    }
+                    fazendaInput.style.display = 'none';
+                }
+                // FIM DA MODIFICAÇÃO
 
                 osElement.querySelectorAll('select[multiple].talhao-select').forEach(select => {
                     const span = select.parentElement.querySelector('.talhao-code-span');
