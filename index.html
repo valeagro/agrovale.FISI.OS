@@ -951,22 +951,66 @@
         }
         
         function verifyAllOS() {
-            let allGood = true;
-            document.querySelectorAll('.os-container').forEach(os => {
-                const statusSpan = os.querySelector('.os-status');
-                const fields = [os.querySelector('.operacao-select'), os.querySelector('.data-input'), os.querySelector('.almoxarifado-input'), os.querySelector('.fazenda-input'), os.querySelector('.responsavel-select')];
-                const totalArea = parseFloat(os.querySelector('.totalAreaInput').value.replace(',', '.')) || 0;
-                if (fields.every(f => f.value) && totalArea > 0) {
-                    statusSpan.textContent = 'Verificado';
-                    statusSpan.classList.add('verified');
-                } else {
-                    statusSpan.textContent = 'Não Verificado';
-                    statusSpan.classList.remove('verified');
-                    allGood = false;
-                }
-            });
-            alert(allGood ? "Todas as O.S. foram verificadas com sucesso!" : "Verifique os campos obrigatórios em todas as O.S. (Operação, Data, Almoxarifado, Fazenda, Responsável e Área Total > 0).");
-        }
+            let allGood = true;
+            document.querySelectorAll('.os-container').forEach(os => {
+                const statusSpan = os.querySelector('.os-status');
+                let osIsValid = true; // Assume que esta O.S. é válida inicialmente
+
+                // 1. Verifica todos os campos simples obrigatórios
+                const requiredFields = [
+                    os.querySelector('.operacao-select'),
+                    os.querySelector('.data-input'),
+                    os.querySelector('.data-inicial-input'), // Adicionado
+                    os.querySelector('.data-final-input'),   // Adicionado
+                    os.querySelector('.almoxarifado-input'),
+                    os.querySelector('.fazenda-input'),
+                    os.querySelector('.responsavel-select')
+                ];
+
+                if (!requiredFields.every(f => f && f.value)) {
+                    osIsValid = false;
+                }
+
+                // 2. Verifica a Área Total
+                const totalArea = parseFloat(os.querySelector('.totalAreaInput').value.replace(',', '.')) || 0;
+                if (totalArea <= 0) {
+                    osIsValid = false;
+                }
+
+                // 3. Verifica Máquinas (se uma máquina for selecionada, seu Rend. P/HA deve ser preenchido)
+                os.querySelectorAll('.maquina-select').forEach(maquinaSelect => {
+                    if (maquinaSelect.value) { // Se uma máquina está selecionada...
+                        const rendInput = maquinaSelect.closest('tr').querySelector('.maquina-rend-p-ha-input');
+                        if (!rendInput.value) { // ...seu rendimento deve ser preenchido.
+                            osIsValid = false;
+                        }
+                    }
+                });
+
+                // 4. Verifica Insumos (se um insumo for selecionado, seu Rend. P/HA deve ser preenchido)
+                os.querySelectorAll('.insumo-select').forEach(insumoSelect => {
+                    if (insumoSelect.value) { // Se um insumo está selecionado...
+                        const rendInput = insumoSelect.closest('tr').querySelector('.rend-p-ha-input');
+                        if (!rendInput.value) { // ...seu rendimento deve ser preenchido.
+                            osIsValid = false;
+                        }
+                    }
+                });
+
+                // 5. Atualiza o status visual da O.S.
+                if (osIsValid) {
+                    statusSpan.textContent = 'Verificado';
+                    statusSpan.classList.add('verified');
+                } else {
+                    statusSpan.textContent = 'Não Verificado';
+                    statusSpan.classList.remove('verified');
+                    allGood = false; // Se qualquer O.S. for inválida, o alerta final falha
+                }
+            });
+            
+            // 6. Atualiza a mensagem de alerta
+            alert(allGood ? "Todas as O.S. foram verificadas com sucesso!" : "Verifique os campos obrigatórios em todas as O.S. (Operação, Datas, Almoxarifado, Fazenda, Responsável, Área Total > 0, e Rend. P/HA para Máquinas/Insumos selecionados).");
+        }
 
         function printAll() {
             if (Array.from(document.querySelectorAll('.os-status')).some(s => !s.classList.contains('verified'))) {
@@ -1047,3 +1091,4 @@
 
 
 </html>
+
